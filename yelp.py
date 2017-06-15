@@ -19,6 +19,7 @@ def token():
 		page = response.read().decode('ascii')
 
 	token = json.loads(page)["access_token"]
+
 	return token
 
 token = token()
@@ -40,20 +41,27 @@ def searchRestaurants(term, limit, radius, offset, location):
     }
 	return request(bis_url, token, url_params=url_params)
 
-def searchLocalRestaurants(term, limit, radius, offset):
+
+def searchLocalRestaurants(term, limit, radius, offset, lat=None, lng=None):
 	bis_url = 'https://api.yelp.com/v3/businesses/search'
 	# radius in miles convert to m
 	if(radius>25 or radius<0):
 		print("radius exceeds limit, defaulting to 25 miles")
 		radius = 25
 	
+	if(lat!=None and lng!=None):
+		latitude = lat
+		longitude = lng
+	else:
+		latitude = currentLocation()[0]
+		longitude = currentLocation()[1]
 	url_params = {
         'term': term.replace(' ', '+'),
-        'longitude': currentLocation()[1],
-        'latitude': currentLocation()[0],
+        'latitude': latitude,
+        'longitude': longitude,
         'limit': limit,
         'offset': offset,
-        'radius': 1600#(int)(40000.*radius/25.) #max radius is 40 km or 25 mi
+        'radius': (int)(40000.*radius/25.) #max radius is 40 km or 25 mi
     }
 	return request(bis_url, token, url_params=url_params)
 
@@ -70,14 +78,13 @@ def currentLocation():
 def restaurantStats():
 	data = {'data':[]}
 	titleDict = {}
-	for i in range(0,1000,50):
-		json_data = searchLocalRestaurants(term='restaurant', limit=50, radius=25, offset = i)
+	for i in range(0,100,50):
+		json_data = searchLocalRestaurants(term='restaurants', limit=50, radius=25, offset = i,lat=None, lng=None)
 		for business in json_data["businesses"]:
-			try:
-				data['data'].append(business.copy())
-				title = business["categories"][0]["alias"]
-			except IndexError:
+			if(business['distance']>1000):
 				break
+			data['data'].append(business.copy())
+			title = business["categories"][0]["alias"]
 			if(title in titleDict.keys()):
 				titleDict[title]+=1
 			else:
@@ -105,14 +112,34 @@ def analyzeFile():
 				else:
 					titleDict[title]=1
 			data.append(titleList)
-	from sklearn.feature_extraction.text import CountVectorizer
-	#bag_of_words = CountVectorizer(tokenizer=lambda doc: doc, lowercase=False).fit_transform(splited_labels_from_corpus)
-	print(data)
 
-restaurantStats()
-analyzeFile()
+	return titleDict
 
+def categories():
+	newdata = {'data':[]}
+	with open('categories.json', 'r') as f:
+		array = json.load(f)
+	for cat in array:
+		if any(i in cat["parents"] for i in ["restaurants"]):
+			newdata['data'].append(cat)
+	with open('shortcategories.txt', 'w+') as outfile:
+		json.dump(newdata, outfile, indent=4)
 
+def data(radius, lat, lng):
+	titleDict = {}
+	for i in range(0,1000,50):
+		json_data = searchLocalRestaurants(term='restaurants', limit=50, radius=radius, offset = i, lat=lat, lng=lng)
+		for business in json_data["businesses"]:
+			if(business['distance']>(40000.*radius/25.)):
+				break
+			title = business["categories"][0]["alias"]
 
+			if(title in titleDict.keys()):
+				titleDict[title]+=1
+			else:
+				titleDict[title]=1
+	return titleDict
+
+#print(data(10, 42.5879,-72.3498))
 
 
