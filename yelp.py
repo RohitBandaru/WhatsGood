@@ -1,5 +1,6 @@
-CLIENT_ID = 'WMqiNkJ3XbQjLxHnZ2l8pQ'
-CLIENT_SECRET = 'snC2xR229hBYTYQLCGzO8vFyXHOnnRhXyPR4NAN3U1jx0kFRj1dyOmAledvjJu9s'
+import config
+CLIENT_ID = config.CLIENT_ID()
+CLIENT_SECRET = config.CLIENT_SECRET()
 
 import urllib.request as req
 import urllib.parse as parse
@@ -75,21 +76,13 @@ def currentLocation():
 	lon = j['longitude']
 	return (lat,lon)
 
-def restaurantStats():
+def writeData():
 	data = {'data':[]}
-	titleDict = {}
-	for i in range(0,100,50):
+	for i in range(0,1000,50):
 		json_data = searchLocalRestaurants(term='restaurants', limit=50, radius=25, offset = i,lat=None, lng=None)
 		for business in json_data["businesses"]:
-			if(business['distance']>1000):
-				break
 			data['data'].append(business.copy())
-			title = business["categories"][0]["alias"]
-			if(title in titleDict.keys()):
-				titleDict[title]+=1
-			else:
-				titleDict[title]=1
-	import json
+	
 	with open('data.txt', 'w+') as outfile:
 		json.dump(data, outfile)
 	return titleDict
@@ -140,6 +133,5 @@ def data(radius, lat, lng):
 				titleDict[title]=1
 	return titleDict
 
-#print(data(10, 42.5879,-72.3498))
 
-
+print(analyzeFile())
