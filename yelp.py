@@ -1,3 +1,4 @@
+# config.py file ignored in git, get client keys from Yelp
 import config
 CLIENT_ID = config.CLIENT_ID()
 CLIENT_SECRET = config.CLIENT_SECRET()
@@ -31,17 +32,6 @@ def request(url, token, url_params=None):
 	response = requests.request('GET', url, headers=headers, params=url_params)
 
 	return response.json()
-
-def searchRestaurants(term, limit, radius, offset, location):
-	bis_url = 'https://api.yelp.com/v3/businesses/search'
-
-	url_params = {
-        'term': term.replace(' ', '+'),
-        'location': location.replace(' ', '+'),
-        'limit': 10
-    }
-	return request(bis_url, token, url_params=url_params)
-
 
 def searchLocalRestaurants(term, limit, radius, offset, lat=None, lng=None):
 	bis_url = 'https://api.yelp.com/v3/businesses/search'
@@ -77,36 +67,69 @@ def currentLocation():
 	return (lat,lon)
 
 def writeData():
+	# get a ton of data from various cities and write to data.txt
+	# this will take a long time, but result in about 6700 restaurants
 	data = {'data':[]}
-	for i in range(0,1000,50):
-		json_data = searchLocalRestaurants(term='restaurants', limit=50, radius=25, offset = i,lat=None, lng=None)
-		for business in json_data["businesses"]:
-			data['data'].append(business.copy())
-	
+	locations = ['Boston', 'New York', 'San Francisco', 'Austin', 'Los Angeles', 'Seattle', 'Washington DC', 'Philadelphia' \
+	'Chicago', 'Houston', 'Phoenix', 'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Detroit', 'Portland', 'Memphis']
+
+	for location in locations:
+		for i in range(0,1000,50):
+			json_data = searchRestaurants(i, location)
+			for business in json_data["businesses"]:
+				data['data'].append(business.copy())
+
 	with open('data.txt', 'w+') as outfile:
 		json.dump(data, outfile)
-	return titleDict
+
+def searchRestaurants(offset, location):
+	bis_url = 'https://api.yelp.com/v3/businesses/search'
+
+	url_params = {
+        'term': 'restaurants',
+        'location': location.replace(' ', '+'),
+        'offset': offset,
+        'categories': 'restaurants'
+    }
+
+	return request(bis_url, token, url_params=url_params)
 
 def analyzeFile():
 	with open('data.txt', 'r') as f:
 		array = json.load(f)
 
-	unwanted = ['eventplanning', 'wedding_planning', 'catering', 'fooddeliveryservices']
+	unwanted = ['eventplanning', 'wedding_planning', 'catering', 'fooddeliveryservices', 'foodtrucks', 'vinyl_records'\
+	'aquariums', 'jazzandblues', 'theater', 'movietheaters', 'gaybars']
 	titleDict = {}
 	data = []
-	for business in array['data']:
-		if business["categories"][0]['alias'] not in unwanted:
-			titleList = []
-			for cat in business["categories"]:
-				title = cat["alias"]
-				titleList.append(title)
-				if(title in titleDict.keys()):
-					titleDict[title]+=1
-				else:
-					titleDict[title]=1
-			data.append(titleList)
 
-	return titleDict
+	for business in array['data']:
+		titleList = ""
+		unwantedBool = False
+		for cat in business["categories"]:
+			title = cat["alias"]
+			if(title in unwanted):
+				unwantedBool = True
+			titleList+=title+' '
+			
+		if(not unwantedBool):
+			if(title in titleDict.keys()):
+				titleDict[title]+=1
+			else:
+				titleDict[title]=1
+			data.append(titleList)
+	pickle.dump( data, open( "titles.p", "wb" ) )
+
+def analyzeFileML():
+	data = pickle.load( open( "titles.p", "rb" ) )
+
+	from sklearn.feature_extraction.text import CountVectorizer
+	cv = CountVectorizer()
+	cv_fit=cv.fit_transform(data)
+	print(cv.get_feature_names())
+	print(cv_fit.toarray())
+	
+
 
 def categories():
 	newdata = {'data':[]}
@@ -118,6 +141,7 @@ def categories():
 	with open('shortcategories.txt', 'w+') as outfile:
 		json.dump(newdata, outfile, indent=4)
 
+# for flask request
 def data(radius, lat, lng):
 	titleDict = {}
 	for i in range(0,1000,50):
@@ -134,4 +158,13 @@ def data(radius, lat, lng):
 	return titleDict
 
 
-print(analyzeFile())
+
+
+
+analyzeFileML()
+
+
+
+
+
+

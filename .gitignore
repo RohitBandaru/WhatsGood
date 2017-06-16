@@ -1,3 +1,34 @@
+config.py
+
+data.txt
+
+titles.p
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Logs
 logs
 *.log
@@ -57,5 +88,5 @@ typings/
 # dotenv environment variables file
 .env
 
-config.py
+
 
