@@ -118,10 +118,10 @@ def analyzeFile():
 			else:
 				titleDict[title]=1
 			data.append(titleList)
-	pickle.dump( data, open( "titles.p", "wb" ) )
+	pickle.dump( data, open("titles.p", "wb"))
 
 def analyzeFileML():
-	data = pickle.load( open( "titles.p", "rb" ) )
+	data = pickle.load( open("titles.p", "rb"))
 
 	from sklearn.feature_extraction.text import CountVectorizer
 	cv = CountVectorizer()
@@ -141,27 +141,37 @@ def categories():
 	with open('shortcategories.txt', 'w+') as outfile:
 		json.dump(newdata, outfile, indent=4)
 
+
 # for flask request
 def data(radius, lat, lng):
+	cats = pickle.load( open("categories.p", "rb"))
 	titleDict = {}
 	for i in range(0,1000,50):
 		json_data = searchLocalRestaurants(term='restaurants', limit=50, radius=radius, offset = i, lat=lat, lng=lng)
 		for business in json_data["businesses"]:
 			if(business['distance']>(40000.*radius/25.)):
 				break
-			title = business["categories"][0]["alias"]
-
-			if(title in titleDict.keys()):
-				titleDict[title]+=1
-			else:
-				titleDict[title]=1
+			#catmap maps each category with the number of occurences
+			catmap = {}
+			for category in business["categories"]:
+				title = category["alias"]
+				for cat in cats:
+					if(title in cats[cat]):
+						if(title in catmap.keys()):
+							catmap[cat]+=1
+						else:
+							catmap[cat]=1
+			if(len(catmap)!=0):
+				title = max(catmap, key=catmap.get)
+				if(title in titleDict.keys()):
+					titleDict[title]+=1
+				else:
+					titleDict[title]=1
+		else: #break out of nested for loop
+			continue
+		break
 	return titleDict
 
-
-
-
-
-analyzeFileML()
 
 
 
