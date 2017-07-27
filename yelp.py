@@ -128,7 +128,7 @@ def analyzeFileML():
 	cv_fit=cv.fit_transform(data)
 	print(cv.get_feature_names())
 	print(cv_fit.toarray())
-	
+	print(data)
 
 
 def categories():
@@ -144,35 +144,112 @@ def categories():
 
 # for flask request
 def data(radius, lat, lng):
-	cats = pickle.load( open("categories.p", "rb"))
 	titleDict = {}
 	for i in range(0,1000,50):
 		json_data = searchLocalRestaurants(term='restaurants', limit=50, radius=radius, offset = i, lat=lat, lng=lng)
 		for business in json_data["businesses"]:
 			if(business['distance']>(40000.*radius/25.)):
 				break
-			#catmap maps each category with the number of occurences
-			catmap = {}
-			for category in business["categories"]:
-				title = category["alias"]
-				for cat in cats:
-					if(title in cats[cat]):
-						if(title in catmap.keys()):
-							catmap[cat]+=1
-						else:
-							catmap[cat]=1
-			if(len(catmap)!=0):
-				title = max(catmap, key=catmap.get)
-				if(title in titleDict.keys()):
-					titleDict[title]+=1
-				else:
-					titleDict[title]=1
+
+			category = findCategory(business)
+			if(title in titleDict.keys()):
+				titleDict[title]+=1
+			else:
+				titleDict[title]=1
 		else: #break out of nested for loop
 			continue
 		break
 	return titleDict
 
+def findCategory(business):
+	'''
+		catmap maps each category with the number of occurences
+		returns the category with the most number of occurences
+	'''
+	cats = pickle.load( open("categories.p", "rb"))
+	catmap = {}
+	for category in business["categories"]:
+		title = category["alias"]
+		for cat in cats:
+			if(title in cats[cat]):
+				if(title in catmap.keys()):
+					catmap[cat]+=1
+				else:
+					catmap[cat]=1
+	if(len(catmap)==0):
+		return "other"
+	title = max(catmap, key=catmap.get)
+	return title
 
+
+def categoryRating(radius, lat, lng):
+	
+	categoryRating = {}
+	for i in range(0,1000,50):
+		json_data = searchLocalRestaurants(term='restaurants', limit=50, radius=radius, offset = i, lat=lat, lng=lng)
+		for business in json_data["businesses"]:
+			if(business['distance']>(40000.*radius/25.)):
+				break
+
+			# category
+			category = findCategory(business)
+
+			rating = business["rating"]
+			reviewCount = business["review_count"]
+
+			if(category in categoryRating.keys()):
+				oldRating = categoryRating[category][0]
+				oldReviewCount = categoryRating[category][1]
+
+				newRating = round((oldRating*oldReviewCount + rating*reviewCount)/(oldReviewCount+reviewCount),4)
+				newReviewCount = oldReviewCount + reviewCount
+				newReviewData = (newRating, newReviewCount)
+
+				categoryRating[category]=newReviewData
+			else:
+				categoryRating[category] = (rating, reviewCount)
+					
+		else: #break out of nested for loop
+			continue
+		break
+				
+	return categoryRating 
+
+def bestCategory(categoryRating):
+	'''imdb movie ranking formula
+		Weighted ranking = (reviewCount / (reviewCount + mininumReviewCount)) * averageRating + 
+		(mininumReviewCount / (reviewCount + mininumReviewCount)) * average all ratings
+	'''
+	weightedCategoryRating = {}
+
+	mininumReviewCount = 200
+	totalReviewCount = 0
+	totalRatingSum = 0
+	for category in categoryRating:
+		if category in ["other", "other_ethnic"]:
+			continue
+		reviewData = categoryRating[category]
+		rating = reviewData[0]
+		reviewCount = reviewData[1]
+
+		totalReviewCount += reviewCount
+		totalRatingSum += rating*reviewCount
+
+	averageRating = totalRatingSum/totalReviewCount
+
+	for category in categoryRating:
+		if category in ["other", "other_ethnic"]:
+			continue
+		reviewData = categoryRating[category]
+		rating = reviewData[0]
+		reviewCount = reviewData[1]
+
+		wr = (reviewCount / (reviewCount+mininumReviewCount)) * rating + \
+		(mininumReviewCount /(reviewCount+mininumReviewCount)) * averageRating
+
+		weightedCategoryRating[category] = wr
+
+	return weightedCategoryRating
 
 
 
