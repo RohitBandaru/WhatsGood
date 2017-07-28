@@ -13,7 +13,10 @@ def index():
 def data(radius, lng, lat):
 	return jsonify(yelp.data(radius, float(lat), float(lng)))
 
-    #return jsonify(yelp.data(int(radius), float(lat), float(lng)))
+@app.route('/data/<int:radius>/<string:lat>/<string:lng>', methods=['GET'])
+def ratings(radius, lng, lat):
+	return jsonify(yelp.data(radius, float(lat), float(lng)))
+
 
 if __name__ == '__main__':
 	app.run(debug=True)
