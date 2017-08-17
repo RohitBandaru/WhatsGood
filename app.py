@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return "Hello, World!"
+    return "What's Good?"
 
 
 @app.route('/data/<int:radius>/<string:lat>/<string:lng>', methods=['GET'])

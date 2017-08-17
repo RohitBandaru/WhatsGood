@@ -150,12 +150,11 @@ def data(radius, lat, lng):
 		for business in json_data["businesses"]:
 			if(business['distance']>(40000.*radius/25.)):
 				break
-
 			category = findCategory(business)
-			if(title in titleDict.keys()):
-				titleDict[title]+=1
+			if(category in titleDict.keys()):
+				titleDict[category]+=1
 			else:
-				titleDict[title]=1
+				titleDict[category]=1
 		else: #break out of nested for loop
 			continue
 		break
@@ -215,7 +214,7 @@ def categoryRating(radius, lat, lng):
 				
 	return categoryRating 
 
-def bestCategory(categoryRating):
+def weightedCategoryRating(categoryRating):
 	'''imdb movie ranking formula
 		Weighted ranking = (reviewCount / (reviewCount + mininumReviewCount)) * averageRating + 
 		(mininumReviewCount / (reviewCount + mininumReviewCount)) * average all ratings
