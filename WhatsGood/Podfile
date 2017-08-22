@@ -7,7 +7,8 @@ target 'WhatsGood' do
 
   # Pods for WhatsGood
   pod 'Alamofire', '~> 4.4';
-  pod 'SwiftyJSON'
+  pod 'SwiftyJSON';
+  pod 'Charts';
 
   target 'WhatsGoodTests' do
     inherit! :search_paths
